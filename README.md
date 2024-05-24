@@ -9,6 +9,7 @@ This project comprises a suite of tools for computing and testing diverse financ
 - `trading_strategies.py`: Contains trading strategies corresponding to each indicator and identifies the most profitable trading strategy/indicator.
 - `stock_alerter.py`: Integrates with Twitter for real-time trading signals. It automatically sends out buy, sell, or hold recommendations based on the latest market data. Ensure to set up your Twitter API credentials in the environment variables for seamless integration.
 - `alert.py`: Main function to download the latest data, merge it with existing data, compute financial indicators, and determine trading actions. It sends real-time alerts via Twitter based on the computed indicators.
+- `btc.py`: Script for fetching and saving Bitcoin (BTC) hourly data from the CryptoCompare API.
 
 ## Trading Strategies
 
