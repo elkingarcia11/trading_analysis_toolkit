@@ -1,0 +1,7 @@
+panda
+numpy
+tensorflow
+yfinance
+tweepy
+google.cloud
+dotenv
