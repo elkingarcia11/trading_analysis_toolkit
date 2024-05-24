@@ -1,9 +1,10 @@
 import requests
 import datetime
 import csv
+import os
 
 def fetch_btc_data(api_key, symbol="BTC", compare_currency="USD", to_timestamp=None, limit=2000, aggregate=1):
-    """Fetch historical data for BTC at 2-hour intervals."""
+    """Fetch historical data for BTC at hourly intervals."""
     url = "https://min-api.cryptocompare.com/data/v2/histohour"
     params = {
         'fsym': symbol,
@@ -23,25 +24,28 @@ def fetch_btc_data(api_key, symbol="BTC", compare_currency="USD", to_timestamp=N
     else:
         raise Exception(f"Failed to fetch data: {data.get('Message', 'No error message')}")
 
-def fetch_latest_btc_data(api_key, symbol="BTC", compare_currency="USD"):
-    """Fetch the most recent data for BTC."""
-    url = "https://min-api.cryptocompare.com/data/price"
+def fetch_latest_hourly_btc_data(api_key, symbol="BTC", compare_currency="USD"):
+    """Fetch the latest hourly data for BTC."""
+    url = "https://min-api.cryptocompare.com/data/v2/histohour"
     params = {
         'fsym': symbol,
-        'tsyms': compare_currency,
+        'tsym': compare_currency,
+        'limit': 1,  # Only fetch the most recent hour
+        'aggregate': 1,
+        'e': 'CCCAGG',
         'api_key': api_key
     }
 
     response = requests.get(url, params=params)
     data = response.json()
 
-    if 'USD' in data:
-        return data['USD']
+    if data["Response"] == "Success":
+        return data['Data']['Data']
     else:
-        raise Exception(f"Failed to fetch latest data: {data.get('Message', 'No error message')}")
+        raise Exception(f"Failed to fetch data: {data.get('Message', 'No error message')}")
 
 def format_data(data):
-    """Convert data to more readable format."""
+    """Convert data to a more readable format."""
     formatted_data = []
     for entry in data:
         date = datetime.datetime.fromtimestamp(entry['time']).strftime('%Y-%m-%d %H:%M:%S')
@@ -56,13 +60,29 @@ def format_data(data):
         ])
     return formatted_data
 
-def save_to_csv(data, filename="BTC.csv", include_headers=False):
+def save_to_csv(data, filename="data/BTC.csv", include_headers=False):
     """Save formatted data to a CSV file."""
+    # Check if the data to be appended already exists
+    existing_data = set()
+    if os.path.exists(filename):
+        with open(filename, mode='r') as file:
+            reader = csv.reader(file)
+            existing_data = {tuple(row) for row in reader}
+
+    # Append only if the data is not already present
     with open(filename, mode='a', newline='') as file:
         writer = csv.writer(file)
-        if include_headers:
+        if include_headers and not existing_data:
             writer.writerow(['Date', 'Open', 'High', 'Low', 'Close', 'Adj Close', 'Volume'])
-        writer.writerows(data)
+        if not existing_data:  # If the file is empty, write headers and data
+            writer.writerows(data)
+        else:
+            for row in data:
+                if tuple(row) not in existing_data:
+                    if len(existing_data) > 0:  # Check if the file is not empty
+                        writer.writerow([])  # Add an empty row for separation
+                    writer.writerow(row)
+
 
 def fetch_historical_data():
     api_key = 'YOUR_API_KEY_HERE'  # Replace this with your actual API key
@@ -86,17 +106,23 @@ def fetch_historical_data():
     except Exception as e:
         print(e)
 
-def fetch_and_save_latest_data():
+def fetch_and_save_latest_hourly_data():
     api_key = 'YOUR_API_KEY_HERE'  # Replace this with your actual API key
     try:
-        latest_price = fetch_latest_btc_data(api_key)
-        current_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        latest_data = [[current_time, latest_price, latest_price, latest_price, latest_price, latest_price, 0]]
-        save_to_csv(latest_data, include_headers=False)
-        print(f"Latest data fetched and saved at {current_time}")
+        raw_data = fetch_latest_hourly_btc_data(api_key)
+        if raw_data:
+            formatted_data = format_data(raw_data)
+            formatted_data = formatted_data[1:]
+            save_to_csv(formatted_data, include_headers=False)
+            print(f"Latest hourly data fetched and saved at {formatted_data[0][0]}")
+        else:
+            print("No data fetched.")
     except Exception as e:
         print(e)
 
 if __name__ == "__main__":
-    #fetch_historical_data()
-    fetch_and_save_latest_data()
+    # Uncomment the following line to fetch historical data
+    # fetch_historical_data()
+    
+    # Fetch and save the latest hourly data
+    fetch_and_save_latest_hourly_data()
