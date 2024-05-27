@@ -5,3 +5,4 @@ yfinance
 tweepy
 google.cloud
 dotenv
+pytz
